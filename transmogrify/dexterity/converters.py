@@ -96,7 +96,17 @@ class NamedFileDeserializer(object):
                 contenttype = str(value.get('content_type', ''))
             file = value.get('file', None)
             if file is not None:
-                data = filestore[file]['data']
+                try:
+                    data = filestore[file.encode('utf-8')]['data']
+                except:
+                    fsplit = file.split(u'_')
+                    name = str(fsplit[2])
+                    guesskey=''
+                    for k in filestore.keys():
+                        if k.startswith('_field_%s'%name):
+                            guesskey = k
+                            break
+                    data = filestore[k]['data']
             else:
                 if value.get('encoding', None) == 'base64':
                     # collective.jsonify encodes base64
@@ -355,6 +365,7 @@ class CollectionDeserializer(object):
                     )
         return value
 
+from DateTime import DateTime
 
 @implementer(IDeserializer)
 @adapter(IDate)
@@ -366,7 +377,11 @@ class DateDeserializer(object):
     def __call__(self, value, filestore, item,
                  disable_constraints=False, logger=None):
         if isinstance(value, basestring):
-            value = datetime.strptime(value, '%Y-%m-%d')
+            value = value.split('T')[0] # extract date from possible iso format
+            value = value.split(' ')[0] # extract date from possible iso format
+            value = DateTime(value)
+            value = value.asdatetime()
+            # value = datetime.strptime(value, '%Y-%m-%d')
         if isinstance(value, datetime):
             value = value.date()
         try:
